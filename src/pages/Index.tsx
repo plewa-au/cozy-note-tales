@@ -1,100 +1,122 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNotes } from '../hooks/useNotes';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 const Index = () => {
-  const { notes, addNote, updateNote, deleteNote } = useNotes();
-  const [selectedNote, setSelectedNote] = useState<string | null>(null);
-  const [newNoteTitle, setNewNoteTitle] = useState('');
-  const [newNoteContent, setNewNoteContent] = useState('');
+  const { notes, filteredNotes, searchQuery, setSearchQuery, addNote, updateNote, deleteNote } = useNotes();
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
+  const [currentNoteTitle, setCurrentNoteTitle] = useState('');
+  const [currentNoteContent, setCurrentNoteContent] = useState('');
+
+  // Update form fields when selected note changes
+  useEffect(() => {
+    const note = notes.find(n => n.id === selectedNoteId);
+    if (note) {
+      setCurrentNoteTitle(note.title);
+      setCurrentNoteContent(note.content);
+    } else {
+      setCurrentNoteTitle('');
+      setCurrentNoteContent('');
+    }
+  }, [selectedNoteId, notes]);
 
   const handleCreateNote = () => {
-    if (newNoteTitle.trim()) {
-      addNote(newNoteTitle, newNoteContent);
-      setNewNoteTitle('');
-      setNewNoteContent('');
+    if (currentNoteTitle.trim()) {
+      const newNote = addNote(currentNoteTitle, currentNoteContent);
+      setSelectedNoteId(newNote.id); // Select the newly created note
     }
   };
 
   const handleSelectNote = (noteId: string) => {
-    setSelectedNote(noteId);
-    const note = notes.find(n => n.id === noteId);
-    if (note) {
-      setNewNoteTitle(note.title);
-      setNewNoteContent(note.content);
-    }
+    setSelectedNoteId(noteId);
   };
 
   const handleUpdateNote = () => {
-    if (selectedNote && newNoteTitle.trim()) {
-      updateNote(selectedNote, newNoteTitle, newNoteContent);
+    if (selectedNoteId && currentNoteTitle.trim()) {
+      updateNote(selectedNoteId, currentNoteTitle, currentNoteContent);
     }
   };
 
   const handleDeleteNote = () => {
-    if (selectedNote) {
-      deleteNote(selectedNote);
-      setSelectedNote(null);
-      setNewNoteTitle('');
-      setNewNoteContent('');
+    if (selectedNoteId) {
+      deleteNote(selectedNoteId);
+      setSelectedNoteId(null); // Deselect after deleting
     }
+  };
+
+  const handleNewNoteClick = () => {
+    setSelectedNoteId(null); // Deselect any current note
+    setCurrentNoteTitle('');
+    setCurrentNoteContent('');
   };
 
   return (
     <div className="min-h-screen flex bg-soft-purple">
-      <div className="w-1/3 bg-white p-4 border-r">
+      <div className="w-1/3 bg-white p-4 border-r flex flex-col">
         <h2 className="text-2xl font-bold mb-4 text-primary-purple">Notes</h2>
-        <button 
-          onClick={handleCreateNote}
+        <Input
+          type="text"
+          placeholder="Search notes..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="mb-4"
+        />
+        <Button
+          onClick={handleNewNoteClick}
           className="w-full bg-primary-purple text-white p-2 rounded mb-4"
         >
           New Note
-        </button>
-        {notes.map(note => (
-          <div 
-            key={note.id} 
-            onClick={() => handleSelectNote(note.id)}
-            className={`p-3 border-b cursor-pointer ${
-              selectedNote === note.id ? 'bg-soft-purple' : ''
-            }`}
-          >
-            <h3 className="font-semibold">{note.title}</h3>
-            <p className="text-neutral-gray text-sm truncate">{note.content}</p>
-          </div>
-        ))}
+        </Button>
+        <div className="flex-1 overflow-y-auto">
+          {filteredNotes.length === 0 && searchQuery ? (
+            <p className="text-neutral-gray text-center">No notes found matching your search.</p>
+          ) : filteredNotes.length === 0 && !searchQuery ? (
+            <p className="text-neutral-gray text-center">No notes yet. Create one!</p>
+          ) : (
+            filteredNotes.map(note => (
+              <div
+                key={note.id}
+                onClick={() => handleSelectNote(note.id)}
+                className={`p-3 border-b cursor-pointer ${
+                  selectedNoteId === note.id ? 'bg-soft-purple' : ''
+                }`}
+              >
+                <h3 className="font-semibold">{note.title || 'Untitled Note'}</h3>
+                <p className="text-neutral-gray text-sm truncate">{note.content || 'No content'}</p>
+              </div>
+            ))
+          )}
+        </div>
       </div>
-      <div className="w-2/3 p-6">
-        <input 
-          value={newNoteTitle}
-          onChange={(e) => setNewNoteTitle(e.target.value)}
+      <div className="w-2/3 p-6 flex flex-col">
+        <Input
+          value={currentNoteTitle}
+          onChange={(e) => setCurrentNoteTitle(e.target.value)}
           placeholder="Note Title"
           className="w-full text-2xl font-bold mb-4 p-2 border-b"
         />
-        <textarea 
-          value={newNoteContent}
-          onChange={(e) => setNewNoteContent(e.target.value)}
+        <textarea
+          value={currentNoteContent}
+          onChange={(e) => setCurrentNoteContent(e.target.value)}
           placeholder="Write your note here..."
-          className="w-full h-[calc(100vh-200px)] p-2"
+          className="w-full flex-1 p-2 border rounded-md resize-none"
         />
         <div className="flex space-x-4 mt-4">
-          {selectedNote && (
-            <button 
+          {selectedNoteId && (
+            <Button
               onClick={handleDeleteNote}
-              className="bg-red-500 text-white p-2 rounded"
+              variant="destructive"
             >
               Delete
-            </button>
+            </Button>
           )}
-          <button 
-            onClick={selectedNote ? handleUpdateNote : handleCreateNote}
-            className="bg-primary-purple text-white p-2 rounded"
+          <Button
+            onClick={selectedNoteId ? handleUpdateNote : handleCreateNote}
+            className="bg-primary-purple text-white"
           >
-            {selectedNote ? 'Update Note' : 'Create Note'}
-          </button>
+            {selectedNoteId ? 'Update Note' : 'Create Note'}
+          </Button>
         </div>
       </div>
     </div>
-  );
-};
-
-export default Index;
