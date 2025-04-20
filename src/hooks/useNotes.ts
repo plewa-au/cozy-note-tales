@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 
 export interface Note {
@@ -7,6 +6,7 @@ export interface Note {
   content: string;
   createdAt: number;
   updatedAt: number;
+  labels: string[]; // Added labels field
 }
 
 export const useNotes = () => {
@@ -28,7 +28,8 @@ export const useNotes = () => {
       title,
       content,
       createdAt: Date.now(),
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
+      labels: [] // Initialize with empty labels
     };
     setNotes(prevNotes => [...prevNotes, newNote]);
     return newNote;
@@ -50,10 +51,35 @@ export const useNotes = () => {
     setNotes(prevNotes => prevNotes.filter(note => note.id !== id));
   };
 
-  return { 
-    notes, 
-    addNote, 
-    updateNote, 
-    deleteNote 
+  // Add a label to a note
+  const addLabelToNote = (noteId: string, label: string) => {
+    if (!label.trim()) return; // Prevent adding empty labels
+    setNotes(prevNotes =>
+      prevNotes.map(note =>
+        note.id === noteId
+          ? { ...note, labels: [...new Set([...note.labels, label.trim()])], updatedAt: Date.now() } // Use Set to avoid duplicates
+          : note
+      )
+    );
+  };
+
+  // Remove a label from a note
+  const removeLabelFromNote = (noteId: string, label: string) => {
+    setNotes(prevNotes =>
+      prevNotes.map(note =>
+        note.id === noteId
+          ? { ...note, labels: note.labels.filter(l => l !== label), updatedAt: Date.now() }
+          : note
+      )
+    );
+  };
+
+  return {
+    notes,
+    addNote,
+    updateNote,
+    deleteNote,
+    addLabelToNote,
+    removeLabelFromNote
   };
 };
