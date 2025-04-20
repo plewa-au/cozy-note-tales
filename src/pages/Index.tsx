@@ -7,12 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Trash2, Plus } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { LabelInput } from '@/components/ui/label-input';
 
 const Index = () => {
-  const { notes, addNote, updateNote, deleteNote } = useNotes();
+  const { notes, addNote, updateNote, deleteNote, addLabelToNote, removeLabelFromNote } = useNotes();
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [currentNoteTitle, setCurrentNoteTitle] = useState('');
   const [currentNoteContent, setCurrentNoteContent] = useState('');
+  const [currentNoteLabels, setCurrentNoteLabels] = useState<string[]>([]);
 
   const selectedNote = notes.find(note => note.id === selectedNoteId);
 
@@ -20,20 +23,22 @@ const Index = () => {
     if (selectedNote) {
       setCurrentNoteTitle(selectedNote.title);
       setCurrentNoteContent(selectedNote.content);
+      setCurrentNoteLabels(selectedNote.labels || []); // Initialize labels
     } else {
       setCurrentNoteTitle('');
       setCurrentNoteContent('');
+      setCurrentNoteLabels([]);
     }
   }, [selectedNote]);
 
   const handleCreateNote = () => {
-    const newNote = addNote('New Note', '');
+    const newNote = addNote('New Note', '', []); // Initialize with empty labels
     setSelectedNoteId(newNote.id);
   };
 
   const handleUpdateNote = () => {
     if (selectedNoteId && currentNoteTitle.trim()) {
-      updateNote(selectedNoteId, currentNoteTitle, currentNoteContent);
+      updateNote(selectedNoteId, currentNoteTitle, currentNoteContent, currentNoteLabels);
     }
   };
 
@@ -47,6 +52,23 @@ const Index = () => {
   const handleSelectNote = (noteId: string) => {
     setSelectedNoteId(noteId);
   };
+
+  const handleAddLabel = (label: string) => {
+    if (selectedNoteId && label.trim() && !currentNoteLabels.includes(label.trim())) {
+      const updatedLabels = [...currentNoteLabels, label.trim()];
+      setCurrentNoteLabels(updatedLabels);
+      updateNote(selectedNoteId, currentNoteTitle, currentNoteContent, updatedLabels);
+    }
+  };
+
+  const handleRemoveLabel = (label: string) => {
+    if (selectedNoteId) {
+      const updatedLabels = currentNoteLabels.filter(l => l !== label);
+      setCurrentNoteLabels(updatedLabels);
+      updateNote(selectedNoteId, currentNoteTitle, currentNoteContent, updatedLabels);
+    }
+  };
+
 
   return (
     <div className="flex h-screen bg-background">
@@ -72,6 +94,13 @@ const Index = () => {
                 >
                   <h3 className="font-semibold truncate">{note.title || 'Untitled Note'}</h3>
                   <p className="text-muted-foreground text-sm truncate">{note.content || 'No content'}</p>
+                  {note.labels && note.labels.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {note.labels.map(label => (
+                        <Badge key={label} variant="secondary">{label}</Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </ScrollArea>
@@ -93,6 +122,12 @@ const Index = () => {
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
+            <LabelInput
+              labels={currentNoteLabels}
+              onAddLabel={handleAddLabel}
+              onRemoveLabel={handleRemoveLabel}
+              className="mb-4"
+            />
             <Separator className="mb-4" />
             <Textarea
               value={currentNoteContent}
